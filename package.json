@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@mkkellogg/gaussian-splat-nav": "^0.4.3",
+    "@lumaai/luma-web": "^0.2.0",
     "three": "^0.160.0"
   },
   "devDependencies": {
