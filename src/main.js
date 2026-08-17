@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import * as GaussianSplatJS from '@mkkellogg/gaussian-splat-nav';
+import { LumaSplatsThree } from '@lumaai/luma-web';
 import './style.css';
 
 const app = document.querySelector('#app');
@@ -96,36 +96,60 @@ const viewerWrap = document.querySelector('#viewerWrap');
 const loader = document.querySelector('#loader');
 const errorBox = document.querySelector('#viewerError');
 
-let viewer3D;
+let renderer, camera, controls, scene;
 
 async function init3D() {
   try {
-    // Inizializza il Viewer Gaussian Splat nativo di Kellogg
-    viewer3D = new GaussianSplatJS.Viewer({
-      'rootElement': viewer,
-      'cameraUp': [0, 1, 0],
-      'initialCameraPosition': [0, 1.35, 3.2],
-      'initialCameraLookAt': [0, 1.2, 0],
-      'sphericalHarmonicsDegree': 0
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    viewer.appendChild(renderer.domElement);
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf7f6f2);
+
+    camera = new THREE.PerspectiveCamera(
+      55,
+      viewer.clientWidth / viewer.clientHeight,
+      0.01,
+      1000
+    );
+    camera.position.set(0, 1.35, 3.2);
+
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.07;
+    controls.target.set(0, 1.2, 0);
+
+    // Caricatore Luma per il file .spz
+    const splat = new LumaSplatsThree({
+      source: '/assets/bedroom.spz'
     });
+    scene.add(splat);
 
-    // Carica la scena dal file .spz locale
-    await viewer3D.addSplatScene('/assets/bedroom.spz', {
-      'splatAlphaRemovalThreshold': 5,
-      'showLoadingUI': false,
-      'position': [0, 0, 0],
-      'rotation': [0, 0, 0, 1],
-      'scale': [1, 1, 1]
-    });
+    const ambient = new THREE.HemisphereLight(0xffffff, 0xd8d5ce, 0.8);
+    scene.add(ambient);
 
-    // Avvia il rendering
-    viewer3D.start();
+    const resize = () => {
+      const w = viewer.clientWidth;
+      const h = viewer.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    };
+    window.addEventListener('resize', resize);
 
-    // Nasconde lo spinner di caricamento
-    setTimeout(() => loader.classList.add('hidden'), 500);
+    const animate = () => {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    };
+    animate();
 
+    setTimeout(() => loader.classList.add('hidden'), 900);
   } catch (err) {
-    console.error("Errore nel caricamento del file SPZ:", err);
+    console.error("Errore nel caricamento 3D:", err);
     loader.classList.add('hidden');
     errorBox.hidden = false;
   }
