@@ -3,8 +3,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
 import './style.css';
 
-import modelUrl from '/public/assets/bedroom.spz?url';
-
 const app = document.querySelector('#app');
 
 app.innerHTML = `
@@ -44,8 +42,8 @@ app.innerHTML = `
             <div class="spinner"></div>
             <span>Loading 3D space…</span>
           </div>
-          <div class="viewer-error" id="viewerError" hidden style="background: rgba(200,0,0,0.9); color: white; padding: 12px; font-size: 12px; font-family: monospace; word-break: break-all; z-index: 99;">
-            <strong style="display:block; margin-bottom: 4px;">3D Viewer Error:</strong>
+          <div class="viewer-error" id="viewerError" hidden style="background: rgba(180,0,0,0.95); color: #fff; padding: 12px; font-size: 11px; font-family: monospace; word-break: break-all; z-index: 999; text-align: left;">
+            <strong style="display:block; margin-bottom: 4px; font-size: 12px;">3D Viewer Debug Error:</strong>
             <span id="errorMessage">Unable to load scene file.</span>
           </div>
         </div>
@@ -88,21 +86,13 @@ const errorBox = document.querySelector('#viewerError');
 const errorMessage = document.querySelector('#errorMessage');
 
 function showError(msg) {
-  loader.classList.add('hidden');
-  errorBox.hidden = false;
-  errorMessage.innerText = msg;
+  if (loader) loader.classList.add('hidden');
+  if (errorBox) errorBox.hidden = false;
+  if (errorMessage) errorMessage.innerText = msg;
 }
 
 async function init3D() {
   try {
-    // Check WebGL Support
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-    if (!gl) {
-      showError("WebGL non supportato da questo browser/dispositivo.");
-      return;
-    }
-
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(viewer.clientWidth, viewer.clientHeight);
@@ -122,8 +112,9 @@ async function init3D() {
 
     const spark = new SparkRenderer({ renderer });
 
+    // Caricamento diretto del file statico servito dalla cartella public/assets
     const splat = new SplatMesh({
-      url: modelUrl
+      url: '/assets/bedroom.spz'
     });
 
     splat.position.set(0, 0, 0);
@@ -147,7 +138,9 @@ async function init3D() {
     };
     animate();
 
-    setTimeout(() => loader.classList.add('hidden'), 1000);
+    setTimeout(() => {
+      if (loader) loader.classList.add('hidden');
+    }, 1000);
 
   } catch (err) {
     console.error(err);
