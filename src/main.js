@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
 import './style.css';
 
 const app = document.querySelector('#app');
@@ -43,7 +44,7 @@ app.innerHTML = `
           </div>
           <div class="viewer-error" id="viewerError" hidden>
             <strong>3D viewer unavailable</strong>
-            <span>Unable to load scene.</span>
+            <span>Unable to load scene. Check file path or dependencies.</span>
           </div>
         </div>
       </section>
@@ -85,7 +86,8 @@ app.innerHTML = `
       <h2>From space to experience.</h2>
       <p>
         This prototype uses your supplied Gaussian Splat scene as the interactive
-        centerpiece.
+        centerpiece. Replace the file in <code>public/assets/bedroom.spz</code>
+        with another compatible <code>.spz</code> scene to create another tour.
       </p>
     </div>
   </div>
@@ -96,9 +98,9 @@ const viewerWrap = document.querySelector('#viewerWrap');
 const loader = document.querySelector('#loader');
 const errorBox = document.querySelector('#viewerError');
 
-let renderer, camera, controls, scene, mesh;
+let renderer, camera, controls, scene, spark;
 
-function init3D() {
+async function init3D() {
   try {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -120,13 +122,21 @@ function init3D() {
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.07;
-    controls.target.set(0, 0, 0);
+    controls.target.set(0, 1.2, 0);
 
-    // Cubo di test per verificare che Three.js funzioni al 100%
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshNormalMaterial();
-    mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
+    // Inizializzazione motore Spark per Gaussian Splatting
+    spark = new SparkRenderer({ renderer, scene, camera });
+
+    // Caricamento dell'asset .spz
+    const splat = new SplatMesh({
+      url: '/assets/bedroom.spz'
+    });
+
+    splat.position.set(0, 0, 0);
+    splat.rotation.set(0, 0, 0);
+    splat.scale.setScalar(1);
+    
+    await spark.add(splat);
 
     const ambient = new THREE.HemisphereLight(0xffffff, 0xd8d5ce, 0.8);
     scene.add(ambient);
@@ -142,15 +152,15 @@ function init3D() {
 
     const animate = () => {
       requestAnimationFrame(animate);
-      if (mesh) mesh.rotation.y += 0.01;
       controls.update();
+      if (spark) spark.update();
       renderer.render(scene, camera);
     };
     animate();
 
-    setTimeout(() => loader.classList.add('hidden'), 500);
+    setTimeout(() => loader.classList.add('hidden'), 900);
   } catch (err) {
-    console.error(err);
+    console.error("Errore nel caricamento 3D:", err);
     loader.classList.add('hidden');
     errorBox.hidden = false;
   }
