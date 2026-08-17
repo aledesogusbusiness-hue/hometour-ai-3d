@@ -44,7 +44,7 @@ app.innerHTML = `
           </div>
           <div class="viewer-error" id="viewerError" hidden>
             <strong>3D viewer unavailable</strong>
-            <span>Unable to load scene. Check file path or dependencies.</span>
+            <span>Unable to load scene file.</span>
           </div>
         </div>
       </section>
@@ -100,7 +100,7 @@ let renderer, camera, controls, scene, spark;
 
 async function init3D() {
   try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(viewer.clientWidth, viewer.clientHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -122,7 +122,6 @@ async function init3D() {
     controls.dampingFactor = 0.07;
     controls.target.set(0, 1.2, 0);
 
-    // Usa SparkRenderer associato a Three.js
     spark = new SparkRenderer({ renderer });
 
     const splat = new SplatMesh({
@@ -130,8 +129,9 @@ async function init3D() {
     });
 
     splat.position.set(0, 0, 0);
+    splat.rotation.set(0, 0, 0);
     splat.scale.setScalar(1);
-
+    
     scene.add(splat);
 
     const ambient = new THREE.HemisphereLight(0xffffff, 0xd8d5ce, 0.8);
@@ -154,9 +154,9 @@ async function init3D() {
     };
     animate();
 
-    setTimeout(() => loader.classList.add('hidden'), 800);
+    setTimeout(() => loader.classList.add('hidden'), 900);
   } catch (err) {
-    console.error("3D Error:", err);
+    console.error("Errore 3D:", err);
     loader.classList.add('hidden');
     errorBox.hidden = false;
   }
