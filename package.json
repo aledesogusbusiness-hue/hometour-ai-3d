@@ -1,5 +1,5 @@
 {
-  "name": "hometourai-3d-experience",
+  "name": "hometour-ai-3d",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -9,10 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@sparkjsdev/spark": "latest",
-    "three": "latest"
+    "@sparkjsdev/spark": "^0.1.2",
+    "three": "^0.160.0"
   },
   "devDependencies": {
-    "vite": "latest"
+    "vite": "^5.0.0"
   }
 }
