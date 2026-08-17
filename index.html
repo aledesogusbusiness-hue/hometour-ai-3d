@@ -1,13 +1,121 @@
-<!doctype html>
-<html lang="it">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f7f6f2" />
-    <title>HomeTour.ai — Immersive 3D</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeTour.ai - 3D Experience</title>
+  <link rel="stylesheet" href="/src/style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+        "three/examples/jsm/controls/OrbitControls.js": "https://unpkg.com/three@0.170.0/examples/jsm/controls/OrbitControls.js",
+        "@sparkjsdev/spark": "https://unpkg.com/@sparkjsdev/spark@2.1.0/dist/spark.module.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <img src="/assets/logo.jpg" alt="HomeTour.ai" />
+      </div>
+      <div class="top-actions">
+        <button class="ghost-btn" id="aboutBtn">How it works</button>
+        <button class="solid-btn" id="fullscreenBtn">Fullscreen</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">IMMERSIVE PROPERTY EXPERIENCES</p>
+          <h1>Walk through a space.<br><em>Before you visit it.</em></h1>
+          <p class="lede">
+            HomeTour.ai turns real spaces into interactive 3D experiences,
+            accessible directly from the browser.
+          </p>
+          <div class="hero-actions">
+            <button class="solid-btn large" id="exploreBtn">Explore the space <span>↗</span></button>
+            <button class="ghost-btn large" id="infoBtn">Discover HomeTour.ai</button>
+          </div>
+        </div>
+
+        <div class="viewer-wrap" id="viewerWrap">
+          <div id="viewer"></div>
+          <div class="viewer-overlay">
+            <div class="viewer-status"><span class="status-dot"></span> LIVE 3D VIEW</div>
+            <div class="viewer-hint">Drag to orbit · Scroll to zoom</div>
+          </div>
+          <div class="loader" id="loader">
+            <div class="spinner"></div>
+            <span>Loading Gaussian Splat…</span>
+          </div>
+          <div class="viewer-error" id="viewerError" hidden>
+            <strong>3D viewer unavailable</strong>
+            <span>Unable to load scene file.</span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+    import { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
+
+    const viewer = document.querySelector('#viewer');
+    const loader = document.querySelector('#loader');
+    const errorBox = document.querySelector('#viewerError');
+
+    async function init() {
+      try {
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+        viewer.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf7f6f2);
+
+        const camera = new THREE.PerspectiveCamera(55, viewer.clientWidth / viewer.clientHeight, 0.1, 1000);
+        camera.position.set(0, 1.35, 3.2);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        const spark = new SparkRenderer({ renderer });
+
+        const splat = new SplatMesh({
+          url: '/assets/bedroom.spz'
+        });
+        scene.add(splat);
+
+        window.addEventListener('resize', () => {
+          camera.aspect = viewer.clientWidth / viewer.clientHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+        });
+
+        function animate() {
+          requestAnimationFrame(animate);
+          controls.update();
+          if (spark) spark.update();
+          renderer.render(scene, camera);
+        }
+        animate();
+
+        setTimeout(() => loader.classList.add('hidden'), 1000);
+      } catch (e) {
+        console.error(e);
+        loader.classList.add('hidden');
+        errorBox.hidden = false;
+      }
+    }
+
+    init();
+  </script>
+</body>
 </html>
