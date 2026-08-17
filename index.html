@@ -79,8 +79,7 @@
 
     let moveVector = { x: 0, y: 0 };
 
-    // PERIMETRO RICALIBRATO:
-    // minX/maxX definiscono sinistra/destra, minZ/maxZ definiscono avanti/dietro.
+    // Limiti delle pareti della stanza
     const BOUNDS = {
       minX: -1.8,
       maxX: 1.8,
@@ -108,8 +107,121 @@
         scene.background = new THREE.Color(0xf7f6f2);
 
         const camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 1000);
-        camera.position.set(0, 1.35, 3.2);
+        
+        // POSIZIONE INIZIALE: Telecamera dentro la stanza (Z = 1.0)
+        camera.position.set(0, 1.35, 1.0);
 
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        
+        // MIRA INIZIALE: Guarda in avanti verso l'interno della camera (Z = -1.0)
+        controls.target.set(0, 1.35, -1.0);
+
+        const spark = new SparkRenderer({ renderer });
+        scene.add(spark);
+
+        const res = await fetch('/assets/bedroom.spz');
+        if (!res.ok) {
+          showError(`HTTP Error ${res.status}: Impossibile scaricare /assets/bedroom.spz`);
+          return;
+        }
+
+        const arrayBuffer = await res.arrayBuffer();
+        if (arrayBuffer.byteLength < 1000) {
+          showError(`File SPZ non valido (${arrayBuffer.byteLength} bytes). Controlla Git LFS.`);
+          return;
+        }
+
+        const splat = new SplatMesh({
+          fileBytes: arrayBuffer
+        });
+
+        splat.rotation.z = Math.PI;
+        scene.add(splat);
+
+        if (loader) loader.classList.add('hidden');
+        if (errorBox) errorBox.style.display = 'none';
+
+        if (typeof nipplejs !== 'undefined') {
+          const joystick = nipplejs.create({
+            zone: document.getElementById('joystickZone'),
+            mode: 'static',
+            position: { left: '50px', bottom: '50px' },
+            color: '#111111',
+            size: 80
+          });
+
+          joystick.on('move', (evt, data) => {
+            if (data.vector) {
+              moveVector.x = data.vector.x;
+              moveVector.y = data.vector.y;
+            }
+          });
+
+          joystick.on('end', () => {
+            moveVector.x = 0;
+            moveVector.y = 0;
+          });
+        }
+
+        window.addEventListener('resize', () => {
+          const w = viewer.clientWidth || window.innerWidth;
+          const h = viewer.clientHeight || 450;
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+          renderer.setSize(w, h);
+        });
+
+        const speed = 0.04;
+        function animate() {
+          requestAnimationFrame(animate);
+
+          if (moveVector.x !== 0 || moveVector.y !== 0) {
+            const forward = new THREE.Vector3();
+            camera.getWorldDirection(forward);
+            forward.y = 0;
+            forward.normalize();
+
+            const side = new THREE.Vector3();
+            side.crossVectors(camera.up, forward).normalize();
+
+            const moveX = (side.x * moveVector.x + forward.x * moveVector.y) * speed;
+            const moveZ = (side.z * moveVector.x + forward.z * moveVector.y) * speed;
+
+            const targetX = camera.position.x + moveX;
+            const targetZ = camera.position.z + moveZ;
+
+            const clampedX = Math.max(BOUNDS.minX, Math.min(BOUNDS.maxX, targetX));
+            const clampedZ = Math.max(BOUNDS.minZ, Math.min(BOUNDS.maxZ, targetZ));
+
+            const deltaX = clampedX - camera.position.x;
+            const deltaZ = clampedZ - camera.position.z;
+
+            camera.position.x += deltaX;
+            camera.position.z += deltaZ;
+            controls.target.x += deltaX;
+            controls.target.z += deltaZ;
+          }
+
+          controls.update();
+          renderer.render(scene, camera);
+        }
+        animate();
+
+      } catch (e) {
+        console.error("3D Init Exception:", e);
+        showError(`${e.name || 'Error'}: ${e.message || String(e)}`);
+      }
+    }
+
+    if (document.readyState === 'complete') {
+      init();
+    } else {
+      window.addEventListener('load', init);
+    }
+  </script>
+</body>
+</html>
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
 
