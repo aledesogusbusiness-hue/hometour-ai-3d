@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { LumaSplatsThree } from '@lumaai/luma-web';
+import { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
 import './style.css';
 
 const app = document.querySelector('#app');
@@ -96,11 +96,11 @@ const viewerWrap = document.querySelector('#viewerWrap');
 const loader = document.querySelector('#loader');
 const errorBox = document.querySelector('#viewerError');
 
-let renderer, camera, controls, scene;
+let renderer, camera, controls, scene, spark;
 
 async function init3D() {
   try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(viewer.clientWidth, viewer.clientHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -122,10 +122,16 @@ async function init3D() {
     controls.dampingFactor = 0.07;
     controls.target.set(0, 1.2, 0);
 
-    // Caricatore Luma per il file .spz
-    const splat = new LumaSplatsThree({
-      source: '/assets/bedroom.spz'
+    // Usa SparkRenderer associato a Three.js
+    spark = new SparkRenderer({ renderer });
+
+    const splat = new SplatMesh({
+      url: '/assets/bedroom.spz'
     });
+
+    splat.position.set(0, 0, 0);
+    splat.scale.setScalar(1);
+
     scene.add(splat);
 
     const ambient = new THREE.HemisphereLight(0xffffff, 0xd8d5ce, 0.8);
@@ -143,13 +149,14 @@ async function init3D() {
     const animate = () => {
       requestAnimationFrame(animate);
       controls.update();
+      if (spark && spark.update) spark.update();
       renderer.render(scene, camera);
     };
     animate();
 
-    setTimeout(() => loader.classList.add('hidden'), 900);
+    setTimeout(() => loader.classList.add('hidden'), 800);
   } catch (err) {
-    console.error("Errore nel caricamento 3D:", err);
+    console.error("3D Error:", err);
     loader.classList.add('hidden');
     errorBox.hidden = false;
   }
