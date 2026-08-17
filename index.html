@@ -52,9 +52,9 @@
             <div class="spinner"></div>
             <span>Loading Gaussian Splat…</span>
           </div>
-          <div class="viewer-error" id="viewerError" hidden>
-            <strong>3D viewer unavailable</strong>
-            <span>Unable to load scene file.</span>
+          <div class="viewer-error" id="viewerError" hidden style="background: rgba(180, 0, 0, 0.95); color: white; padding: 12px; font-size: 11px; font-family: monospace; word-break: break-all; z-index: 999;">
+            <strong style="display:block; margin-bottom: 4px;">3D Viewer Error:</strong>
+            <span id="errorMessage">Init error</span>
           </div>
         </div>
       </section>
@@ -69,10 +69,17 @@
     const viewer = document.querySelector('#viewer');
     const loader = document.querySelector('#loader');
     const errorBox = document.querySelector('#viewerError');
+    const errorMessage = document.querySelector('#errorMessage');
+
+    function showError(msg) {
+      if (loader) loader.classList.add('hidden');
+      if (errorBox) errorBox.hidden = false;
+      if (errorMessage) errorMessage.innerText = msg;
+    }
 
     async function init() {
       try {
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setSize(viewer.clientWidth, viewer.clientHeight);
         viewer.appendChild(renderer.domElement);
@@ -91,6 +98,14 @@
         const splat = new SplatMesh({
           url: '/assets/bedroom.spz'
         });
+
+        // Evento di caricamento completato o fallito dello Splat
+        splat.initialized.then(() => {
+          if (loader) loader.classList.add('hidden');
+        }).catch((err) => {
+          showError("Errore decodifica SPZ: " + err);
+        });
+
         scene.add(splat);
 
         window.addEventListener('resize', () => {
@@ -102,16 +117,14 @@
         function animate() {
           requestAnimationFrame(animate);
           controls.update();
-          if (spark) spark.update();
+          if (spark && spark.update) spark.update();
           renderer.render(scene, camera);
         }
         animate();
 
-        setTimeout(() => loader.classList.add('hidden'), 1000);
       } catch (e) {
         console.error(e);
-        loader.classList.add('hidden');
-        errorBox.hidden = false;
+        showError(e.stack || e.message || String(e));
       }
     }
 
