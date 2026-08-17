@@ -54,7 +54,7 @@
           </div>
           <div class="viewer-error" id="viewerError" hidden style="position: absolute; bottom: 10px; left: 10px; right: 10px; background: rgba(180, 0, 0, 0.95); color: white; padding: 12px; font-size: 11px; font-family: monospace; word-break: break-all; z-index: 9999;">
             <strong style="display:block; margin-bottom: 4px;">3D Viewer Error:</strong>
-            <span id="errorMessage">Init error</span>
+            <span id="errorMessage">Caricamento in corso...</span>
           </div>
         </div>
       </section>
@@ -71,9 +71,19 @@
     const errorBox = document.querySelector('#viewerError');
     const errorMessage = document.querySelector('#errorMessage');
 
-    function showError(msg) {
+    function showError(err) {
       if (loader) loader.classList.add('hidden');
       if (errorBox) errorBox.hidden = false;
+      
+      let msg = "Errore sconosciuto";
+      if (err instanceof Error) {
+        msg = `${err.name}: ${err.message}`;
+      } else if (typeof err === 'string') {
+        msg = err;
+      } else if (err && typeof err === 'object') {
+        msg = JSON.stringify(err);
+      }
+      
       if (errorMessage) errorMessage.innerText = msg;
     }
 
@@ -106,7 +116,7 @@
           splat.initialized.then(() => {
             if (loader) loader.classList.add('hidden');
           }).catch((err) => {
-            showError("SPZ Load Error: " + (err.message || err));
+            showError(err);
           });
         } else {
           setTimeout(() => { if (loader) loader.classList.add('hidden'); }, 1500);
@@ -132,11 +142,10 @@
 
       } catch (e) {
         console.error("3D Init Exception:", e);
-        showError(e.name + ": " + e.message);
+        showError(e);
       }
     }
 
-    // Attende che la pagina e il DOM siano completamente pronti prima di avviare WebGL
     if (document.readyState === 'complete') {
       init();
     } else {
