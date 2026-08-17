@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
+import * as GaussianSplatJS from '@mkkellogg/gaussian-splat-nav';
 import './style.css';
 
 const app = document.querySelector('#app');
@@ -85,9 +85,7 @@ app.innerHTML = `
       <p class="eyebrow">HOMETOUR.AI</p>
       <h2>From space to experience.</h2>
       <p>
-        This prototype uses your supplied Gaussian Splat scene as the interactive
-        centerpiece. Replace the file in <code>public/assets/bedroom.spz</code>
-        with another compatible <code>.spz</code> scene to create another tour.
+        This prototype uses your supplied Gaussian Splat scene as the interactive centerpiece.
       </p>
     </div>
   </div>
@@ -98,69 +96,36 @@ const viewerWrap = document.querySelector('#viewerWrap');
 const loader = document.querySelector('#loader');
 const errorBox = document.querySelector('#viewerError');
 
-let renderer, camera, controls, scene, spark;
+let viewer3D;
 
 async function init3D() {
   try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(viewer.clientWidth, viewer.clientHeight);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    viewer.appendChild(renderer.domElement);
-
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf7f6f2);
-
-    camera = new THREE.PerspectiveCamera(
-      55,
-      viewer.clientWidth / viewer.clientHeight,
-      0.01,
-      1000
-    );
-    camera.position.set(0, 1.35, 3.2);
-
-    controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.07;
-    controls.target.set(0, 1.2, 0);
-
-    // Inizializzazione motore Spark per Gaussian Splatting
-    spark = new SparkRenderer({ renderer, scene, camera });
-
-    // Caricamento dell'asset .spz
-    const splat = new SplatMesh({
-      url: '/assets/bedroom.spz'
+    // Inizializza il Viewer Gaussian Splat nativo di Kellogg
+    viewer3D = new GaussianSplatJS.Viewer({
+      'rootElement': viewer,
+      'cameraUp': [0, 1, 0],
+      'initialCameraPosition': [0, 1.35, 3.2],
+      'initialCameraLookAt': [0, 1.2, 0],
+      'sphericalHarmonicsDegree': 0
     });
 
-    splat.position.set(0, 0, 0);
-    splat.rotation.set(0, 0, 0);
-    splat.scale.setScalar(1);
-    
-    await spark.add(splat);
+    // Carica la scena dal file .spz locale
+    await viewer3D.addSplatScene('/assets/bedroom.spz', {
+      'splatAlphaRemovalThreshold': 5,
+      'showLoadingUI': false,
+      'position': [0, 0, 0],
+      'rotation': [0, 0, 0, 1],
+      'scale': [1, 1, 1]
+    });
 
-    const ambient = new THREE.HemisphereLight(0xffffff, 0xd8d5ce, 0.8);
-    scene.add(ambient);
+    // Avvia il rendering
+    viewer3D.start();
 
-    const resize = () => {
-      const w = viewer.clientWidth;
-      const h = viewer.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    };
-    window.addEventListener('resize', resize);
+    // Nasconde lo spinner di caricamento
+    setTimeout(() => loader.classList.add('hidden'), 500);
 
-    const animate = () => {
-      requestAnimationFrame(animate);
-      controls.update();
-      if (spark) spark.update();
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    setTimeout(() => loader.classList.add('hidden'), 900);
   } catch (err) {
-    console.error("Errore nel caricamento 3D:", err);
+    console.error("Errore nel caricamento del file SPZ:", err);
     loader.classList.add('hidden');
     errorBox.hidden = false;
   }
