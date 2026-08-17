@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@sparkjsdev/spark": "^0.1.2",
+    "@mkkellogg/gaussian-splat-nav": "^0.4.3",
     "three": "^0.160.0"
   },
   "devDependencies": {
