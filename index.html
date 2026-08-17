@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HomeTour.ai - 3D Experience</title>
   <link rel="stylesheet" href="/src/style.css" />
+  
+  <!-- Libreria per il Joystick Virtuale -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
+
   <script type="importmap">
     {
       "imports": {
@@ -44,9 +48,13 @@
 
         <div class="viewer-wrap" id="viewerWrap" style="position: relative; min-height: 450px; width: 100%;">
           <div id="viewer" style="width: 100%; height: 100%; min-height: 450px;"></div>
+          
+          <!-- Contenitore Joystick (in basso a sinistra) -->
+          <div id="joystickZone" style="position: absolute; bottom: 20px; left: 20px; width: 100px; height: 100px; z-index: 10000; touch-action: none;"></div>
+
           <div class="viewer-overlay">
             <div class="viewer-status"><span class="status-dot"></span> LIVE 3D VIEW</div>
-            <div class="viewer-hint">Drag to orbit · Scroll to zoom</div>
+            <div class="viewer-hint">Usa il joystick per camminare</div>
           </div>
           <div class="loader" id="loader">
             <div class="spinner"></div>
@@ -70,6 +78,18 @@
     const loader = document.querySelector('#loader');
     const errorBox = document.querySelector('#viewerError');
     const errorMessage = document.querySelector('#errorMessage');
+
+    // Vettori di movimento per il joystick
+    let moveVector = { x: 0, y: 0 };
+
+    // PERIMETRO (Mura invisibili per non far uscire le persone)
+    // Puoi regolare questi 4 valori per stringere o allargare la stanza
+    const BOUNDS = {
+      minX: -2.5,
+      maxX: 2.5,
+      minZ: -2.5,
+      maxZ: 2.5
+    };
 
     function showError(msg) {
       if (loader) loader.classList.add('hidden');
@@ -115,14 +135,36 @@
           fileBytes: arrayBuffer
         });
 
-        // RUOTA LO SPLAT SULL'ASSE Z PER METTERLO NEL VERSO CORRETTO
+        // Orientamento corretto
         splat.rotation.z = Math.PI;
 
         scene.add(splat);
 
-        // NASCONDE SPINNER ED ERRORE
         if (loader) loader.classList.add('hidden');
         if (errorBox) errorBox.style.display = 'none';
+
+        // INIZIALIZZAZIONE JOYSTICK
+        if (typeof nipplejs !== 'undefined') {
+          const joystick = nipplejs.create({
+            zone: document.getElementById('joystickZone'),
+            mode: 'static',
+            position: { left: '50px', bottom: '50px' },
+            color: '#111111',
+            size: 80
+          });
+
+          joystick.on('move', (evt, data) => {
+            if (data.vector) {
+              moveVector.x = data.vector.x;
+              moveVector.y = data.vector.y;
+            }
+          });
+
+          joystick.on('end', () => {
+            moveVector.x = 0;
+            moveVector.y = 0;
+          });
+        }
 
         window.addEventListener('resize', () => {
           const w = viewer.clientWidth || window.innerWidth;
@@ -132,8 +174,25 @@
           renderer.setSize(w, h);
         });
 
+        // CICLO DI ANIMAZIONE CON CALCOLO CONFINI
+        const speed = 0.04;
         function animate() {
           requestAnimationFrame(animate);
+
+          // Movimento tramite joystick
+          if (moveVector.x !== 0 || moveVector.y !== 0) {
+            let nextX = camera.position.x + moveVector.x * speed;
+            let nextZ = camera.position.z - moveVector.y * speed;
+
+            // Mura/Limiti: blocca la telecamera entro i valori min e max
+            camera.position.x = Math.max(BOUNDS.minX, Math.min(BOUNDS.maxX, nextX));
+            camera.position.z = Math.max(BOUNDS.minZ, Math.min(BOUNDS.maxZ, nextZ));
+
+            // Aggiorna la mira dei controlli
+            controls.target.x = camera.position.x;
+            controls.target.z = camera.position.z - 1;
+          }
+
           controls.update();
           renderer.render(scene, camera);
         }
@@ -153,3 +212,4 @@
   </script>
 </body>
 </html>
+
