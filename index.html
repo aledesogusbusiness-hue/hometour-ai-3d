@@ -54,7 +54,7 @@
           </div>
           <div class="viewer-error" id="viewerError" hidden style="position: absolute; bottom: 10px; left: 10px; right: 10px; background: rgba(180, 0, 0, 0.95); color: white; padding: 12px; font-size: 11px; font-family: monospace; word-break: break-all; z-index: 9999;">
             <strong style="display:block; margin-bottom: 4px;">3D Viewer Error:</strong>
-            <span id="errorMessage">Caricamento in corso...</span>
+            <span id="errorMessage">Init error</span>
           </div>
         </div>
       </section>
@@ -71,20 +71,10 @@
     const errorBox = document.querySelector('#viewerError');
     const errorMessage = document.querySelector('#errorMessage');
 
-    function showError(err) {
+    function showError(msg) {
       if (loader) loader.classList.add('hidden');
       if (errorBox) errorBox.hidden = false;
-      
-      let msg = "Errore sconosciuto";
-      if (err instanceof Error) {
-        msg = `${err.name}: ${err.message}`;
-      } else if (typeof err === 'string') {
-        msg = err;
-      } else if (err && typeof err === 'object') {
-        msg = JSON.stringify(err);
-      }
-      
-      if (errorMessage) errorMessage.innerText = msg;
+      if (errorMessage) errorMessage.innerText = String(msg);
     }
 
     async function init() {
@@ -108,21 +98,28 @@
 
         const spark = new SparkRenderer({ renderer });
 
-        const splat = new SplatMesh({
-          url: '/assets/bedroom.spz'
-        });
-
-        if (splat.initialized) {
-          splat.initialized.then(() => {
-            if (loader) loader.classList.add('hidden');
-          }).catch((err) => {
-            showError(err);
-          });
-        } else {
-          setTimeout(() => { if (loader) loader.classList.add('hidden'); }, 1500);
+        // 1. SCARICAMENTO DIRETTO DEL FILE PER EVITARE BLOCCHI DI RETE
+        const res = await fetch('/assets/bedroom.spz');
+        if (!res.ok) {
+          showError(`HTTP Error ${res.status}: Impossibile scaricare il file .spz`);
+          return;
         }
 
+        const buffer = await res.arrayBuffer();
+        if (buffer.byteLength < 1000) {
+          showError(`File non valido (${buffer.byteLength} bytes). Verificare Git LFS su Vercel.`);
+          return;
+        }
+
+        // 2. PASSAGGIO DEL BUFFER DIRECTLY A SPARK
+        const splat = new SplatMesh({
+          buffer: buffer
+        });
+
         scene.add(splat);
+
+        if (loader) loader.classList.add('hidden');
+        if (errorBox) errorBox.hidden = true;
 
         window.addEventListener('resize', () => {
           const w = viewer.clientWidth || window.innerWidth;
@@ -142,7 +139,7 @@
 
       } catch (e) {
         console.error("3D Init Exception:", e);
-        showError(e);
+        showError(`${e.name}: ${e.message}`);
       }
     }
 
