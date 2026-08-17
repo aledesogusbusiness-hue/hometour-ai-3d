@@ -1,11 +1,13 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  assetsInclude: ['**/*.spz', '**/*.ply'],
-  server: {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-    },
+  assetsInclude: ['**/*.spz', '**/*.worker.js'],
+  build: {
+    target: 'esnext'
   },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext'
+    }
+  }
 });
-
