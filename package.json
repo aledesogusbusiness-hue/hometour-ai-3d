@@ -9,8 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@lumaai/luma-web": "^0.2.0",
-    "three": "^0.157.0"
+    "@sparkjsdev/spark": "latest",
+    "three": "^0.160.0"
   },
   "devDependencies": {
     "vite": "^5.0.0"
