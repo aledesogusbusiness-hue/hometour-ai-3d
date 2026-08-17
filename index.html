@@ -54,7 +54,7 @@
           </div>
           <div class="viewer-error" id="viewerError" hidden style="position: absolute; bottom: 10px; left: 10px; right: 10px; background: rgba(180, 0, 0, 0.95); color: white; padding: 12px; font-size: 11px; font-family: monospace; word-break: break-all; z-index: 9999;">
             <strong style="display:block; margin-bottom: 4px;">3D Viewer Error:</strong>
-            <span id="errorMessage">Init error</span>
+            <span id="errorMessage">Inizializzazione...</span>
           </div>
         </div>
       </section>
@@ -96,24 +96,26 @@
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
 
+        // FONDAMENTALE: Spark dev'essere instanziato e aggiunto alla scena Three.js
         const spark = new SparkRenderer({ renderer });
+        scene.add(spark);
 
-        // 1. SCARICAMENTO DIRETTO DEL FILE PER EVITARE BLOCCHI DI RETE
+        // Fetch del file .spz
         const res = await fetch('/assets/bedroom.spz');
         if (!res.ok) {
-          showError(`HTTP Error ${res.status}: Impossibile scaricare il file .spz`);
+          showError(`HTTP Error ${res.status}: Impossibile scaricare /assets/bedroom.spz`);
           return;
         }
 
-        const buffer = await res.arrayBuffer();
-        if (buffer.byteLength < 1000) {
-          showError(`File non valido (${buffer.byteLength} bytes). Verificare Git LFS su Vercel.`);
+        const arrayBuffer = await res.arrayBuffer();
+        if (arrayBuffer.byteLength < 1000) {
+          showError(`File SPZ non valido (${arrayBuffer.byteLength} bytes). Controlla Git LFS.`);
           return;
         }
 
-        // 2. PASSAGGIO DEL BUFFER DIRECTLY A SPARK
+        // Il parametro esatto di Spark per l'ArrayBuffer è fileBytes
         const splat = new SplatMesh({
-          buffer: buffer
+          fileBytes: arrayBuffer
         });
 
         scene.add(splat);
@@ -132,14 +134,13 @@
         function animate() {
           requestAnimationFrame(animate);
           controls.update();
-          if (spark && spark.update) spark.update();
           renderer.render(scene, camera);
         }
         animate();
 
       } catch (e) {
         console.error("3D Init Exception:", e);
-        showError(`${e.name}: ${e.message}`);
+        showError(`${e.name || 'Error'}: ${e.message || String(e)}`);
       }
     }
 
