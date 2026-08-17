@@ -6,7 +6,6 @@
   <title>HomeTour.ai - 3D Experience</title>
   <link rel="stylesheet" href="/src/style.css" />
   
-  <!-- Libreria per il Joystick Virtuale -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 
   <script type="importmap">
@@ -49,12 +48,11 @@
         <div class="viewer-wrap" id="viewerWrap" style="position: relative; min-height: 450px; width: 100%;">
           <div id="viewer" style="width: 100%; height: 100%; min-height: 450px;"></div>
           
-          <!-- Contenitore Joystick (in basso a sinistra) -->
           <div id="joystickZone" style="position: absolute; bottom: 20px; left: 20px; width: 100px; height: 100px; z-index: 10000; touch-action: none;"></div>
 
           <div class="viewer-overlay">
             <div class="viewer-status"><span class="status-dot"></span> LIVE 3D VIEW</div>
-            <div class="viewer-hint">Usa il joystick per camminare</div>
+            <div class="viewer-hint">Usa il joystick per muoverti e trascina per guardarti intorno</div>
           </div>
           <div class="loader" id="loader">
             <div class="spinner"></div>
@@ -79,16 +77,15 @@
     const errorBox = document.querySelector('#viewerError');
     const errorMessage = document.querySelector('#errorMessage');
 
-    // Vettori di movimento per il joystick
     let moveVector = { x: 0, y: 0 };
 
-    // PERIMETRO (Mura invisibili per non far uscire le persone)
-    // Puoi regolare questi 4 valori per stringere o allargare la stanza
+    // PERIMETRO RICALIBRATO:
+    // minX/maxX definiscono sinistra/destra, minZ/maxZ definiscono avanti/dietro.
     const BOUNDS = {
-      minX: -2.5,
-      maxX: 2.5,
-      minZ: -2.5,
-      maxZ: 2.5
+      minX: -1.8,
+      maxX: 1.8,
+      minZ: -1.5,
+      maxZ: 4.5
     };
 
     function showError(msg) {
@@ -135,15 +132,12 @@
           fileBytes: arrayBuffer
         });
 
-        // Orientamento corretto
         splat.rotation.z = Math.PI;
-
         scene.add(splat);
 
         if (loader) loader.classList.add('hidden');
         if (errorBox) errorBox.style.display = 'none';
 
-        // INIZIALIZZAZIONE JOYSTICK
         if (typeof nipplejs !== 'undefined') {
           const joystick = nipplejs.create({
             zone: document.getElementById('joystickZone'),
@@ -174,23 +168,40 @@
           renderer.setSize(w, h);
         });
 
-        // CICLO DI ANIMAZIONE CON CALCOLO CONFINI
         const speed = 0.04;
         function animate() {
           requestAnimationFrame(animate);
 
-          // Movimento tramite joystick
           if (moveVector.x !== 0 || moveVector.y !== 0) {
-            let nextX = camera.position.x + moveVector.x * speed;
-            let nextZ = camera.position.z - moveVector.y * speed;
+            // Calcolo orientamento basato su dove sta guardando la telecamera
+            const forward = new THREE.Vector3();
+            camera.getWorldDirection(forward);
+            forward.y = 0;
+            forward.normalize();
 
-            // Mura/Limiti: blocca la telecamera entro i valori min e max
-            camera.position.x = Math.max(BOUNDS.minX, Math.min(BOUNDS.maxX, nextX));
-            camera.position.z = Math.max(BOUNDS.minZ, Math.min(BOUNDS.maxZ, nextZ));
+            const side = new THREE.Vector3();
+            side.crossVectors(camera.up, forward).normalize();
 
-            // Aggiorna la mira dei controlli
-            controls.target.x = camera.position.x;
-            controls.target.z = camera.position.z - 1;
+            // Calcolo del passo basato sulla rotazione attuale della vista
+            const moveX = (side.x * moveVector.x + forward.x * moveVector.y) * speed;
+            const moveZ = (side.z * moveVector.x + forward.z * moveVector.y) * speed;
+
+            // Nuova posizione teorica
+            const targetX = camera.position.x + moveX;
+            const targetZ = camera.position.z + moveZ;
+
+            // Blocco entro i confini (Mura)
+            const clampedX = Math.max(BOUNDS.minX, Math.min(BOUNDS.maxX, targetX));
+            const clampedZ = Math.max(BOUNDS.minZ, Math.min(BOUNDS.maxZ, targetZ));
+
+            // Differenza reale applicata a telecamera e punto di mira
+            const deltaX = clampedX - camera.position.x;
+            const deltaZ = clampedZ - camera.position.z;
+
+            camera.position.x += deltaX;
+            camera.position.z += deltaZ;
+            controls.target.x += deltaX;
+            controls.target.z += deltaZ;
           }
 
           controls.update();
@@ -212,4 +223,3 @@
   </script>
 </body>
 </html>
-
