@@ -52,7 +52,7 @@
             <div class="spinner"></div>
             <span>Loading Gaussian Splat…</span>
           </div>
-          <div class="viewer-error" id="viewerError" hidden style="position: absolute; bottom: 10px; left: 10px; right: 10px; background: rgba(180, 0, 0, 0.95); color: white; padding: 12px; font-size: 11px; font-family: monospace; word-break: break-all; z-index: 9999;">
+          <div class="viewer-error" id="viewerError" style="display: none; position: absolute; bottom: 10px; left: 10px; right: 10px; background: rgba(180, 0, 0, 0.95); color: white; padding: 12px; font-size: 11px; font-family: monospace; word-break: break-all; z-index: 9999;">
             <strong style="display:block; margin-bottom: 4px;">3D Viewer Error:</strong>
             <span id="errorMessage">Init error</span>
           </div>
@@ -73,7 +73,7 @@
 
     function showError(msg) {
       if (loader) loader.classList.add('hidden');
-      if (errorBox) errorBox.hidden = false;
+      if (errorBox) errorBox.style.display = 'block';
       if (errorMessage) errorMessage.innerText = String(msg);
     }
 
@@ -115,14 +115,11 @@
           fileBytes: arrayBuffer
         });
 
-        // RUOTA LO SPLAT PER RIGIRARLO NEL VERSO GIUSTO
-        splat.rotation.z = Math.PI;
-
         scene.add(splat);
 
-        // NASCONDE SPINNER ED ERRORE QUANDO PRONTO
+        // FORZA IL NASCONDIMENTO COMPLETO DEL BOX ROSSO E DELLO SPINNER
         if (loader) loader.classList.add('hidden');
-        if (errorBox) errorBox.hidden = true;
+        if (errorBox) errorBox.style.display = 'none';
 
         window.addEventListener('resize', () => {
           const w = viewer.clientWidth || window.innerWidth;
