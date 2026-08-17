@@ -115,9 +115,12 @@
           fileBytes: arrayBuffer
         });
 
+        // RUOTA LO SPLAT SULL'ASSE Z PER METTERLO NEL VERSO CORRETTO
+        splat.rotation.z = Math.PI;
+
         scene.add(splat);
 
-        // FORZA IL NASCONDIMENTO COMPLETO DEL BOX ROSSO E DELLO SPINNER
+        // NASCONDE SPINNER ED ERRORE
         if (loader) loader.classList.add('hidden');
         if (errorBox) errorBox.style.display = 'none';
 
